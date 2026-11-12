@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Cờ Tướng AI - Học & Phân Tích Nước Đi</title>
+  <meta name="description" content="Ứng dụng học cờ tướng với AI phân tích nước đi, gợi ý nước hay, đánh giá thế cờ theo thời gian thực." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cờ Tướng AI" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+  <div class="splash-content">
+    <div class="splash-logo">
+      <div class="logo-emblem">棋</div>
+    </div>
+    <h1 class="splash-title">Cờ Tướng AI</h1>
+    <p class="splash-subtitle">Học & Phân Tích Thông Minh</p>
+    <div class="splash-loader">
+      <div class="loader-bar"></div>
+    </div>
+    <p class="splash-status" id="splash-status">Đang khởi động...</p>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" class="hidden">
+
+  <!-- HEADER -->
+  <header class="app-header" id="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">棋</span>
+        <span class="logo-text">Cờ Tướng <span class="logo-ai">AI</span></span>
+      </div>
+    </div>
+    <nav class="header-nav hidden">
+      <button class="nav-btn active" id="nav-play" data-view="game">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
+        Chơi & Phân Tích
+      </button>
+      <button class="nav-btn" id="nav-analyze" data-view="analyze">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Phân Tích Ván
+      </button>
+      <button class="nav-btn" id="nav-learn" data-view="learn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Học
+      </button>
+    </nav>
+    <div class="header-right hidden">
+      <div class="engine-status" id="engine-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Engine</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="app-main">
+
+    <!-- ========== GAME VIEW ========== -->
+    <div id="view-game" class="view active">
+
+      <!-- Evaluation bar: Black on the left, Red on the right; the better side is longer, the score sits in the middle -->
+      <div class="eval-hbar" id="eval-hbar" data-side="even" role="img" aria-label="Đánh giá thế cờ: cân bằng">
+        <div class="eval-hbar-fill black" id="eval-hbar-black" style="width: 50%"></div>
+        <div class="eval-hbar-fill red" id="eval-hbar-red" style="width: 50%"></div>
+        <span class="eval-hbar-side black">Đen</span>
+        <span class="eval-hbar-side red">Đỏ</span>
+        <span class="eval-hbar-score" id="eval-hbar-score">+0.00</span>
+      </div>
+
+      <div class="game-layout">
+
+        <!-- LEFT PANEL: Evaluation + Settings -->
+        <aside class="panel panel-left">
+          <!-- Evaluation history (hidden as requested) -->
+          <div class="eval-section glass-card hidden">
+            <div class="eval-header">
+              <span class="eval-title">Diễn biến đánh giá</span>
+            </div>
+            <div class="eval-chart-container">
+              <canvas id="eval-chart" width="220" height="80"></canvas>
+            </div>
+          </div>
+
+          <!-- Analysis mode: switch between trying moves and setting up a position -->
+          <div id="analyze-mode-panel" class="glass-card hidden">
+            <div class="analyze-sub-tabs">
+              <button type="button" class="analyze-tab-btn active" id="btn-sub-play" onclick="window.boardEditor.setSubMode('play')">
+                ♟️ Đi thử tự do
+              </button>
+              <button type="button" class="analyze-tab-btn" id="btn-sub-edit" onclick="window.boardEditor.setSubMode('edit')">
+                🛠️ Xếp / Sửa cờ
+              </button>
+            </div>
+
+            <!-- Shown while setting up -->
+            <div id="editor-palette-container" class="editor-palette-container hidden">
+              <div class="palette-piece-summary" id="editor-piece-summary">
+                <div class="summary-item">
+                  <span class="color-dot red-dot"></span>
+                  <span>Đỏ: <strong id="editor-red-count">16</strong></span>
+                </div>
+                <div class="summary-item">
+                  <span class="color-dot black-dot"></span>
+                  <span>Đen: <strong id="editor-black-count">16</strong></span>
+                </div>
+                <div class="summary-status" id="editor-status-badge">
+                  <span class="status-pill">32 quân</span>
+                </div>
+              </div>
+
+              <div class="editor-tool-row">
+                <button type="button" class="editor-action-btn active" id="editor-btn-move" onclick="window.boardEditor.selectTool('move')" title="Chọn bất kỳ quân nào (Đỏ hoặc Đen) rồi bấm ô trống muốn chuyển tới — không theo lượt">
+                  👆 Chuyển quân
+                </button>
+                <button type="button" class="editor-action-btn" id="editor-btn-delete" onclick="window.boardEditor.selectTool('delete')" title="Bật chế độ xóa quân, rồi bấm vào quân cần xóa">
+                  🗑️ Xóa quân
+                </button>
+              </div>
+              <p class="editor-rules-hint">Chọn quân ở khay quanh bàn cờ rồi bấm ô muốn đặt. Xếp tự do, xong bấm “Phân tích”.</p>
+            </div>
+          </div>
+
+          <!-- Move History (moved to replace player-card spot) -->
+          <div class="move-history-card glass-card">
+            <div class="history-header">
+              <h3 class="panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Lịch Sử Nước Đi
+              </h3>
+              <div class="history-nav">
+                <button class="hist-nav-btn" id="hist-first" onclick="window.game.goToMove(0)" title="Đầu">⏮</button>
+                <button class="hist-nav-btn" id="hist-prev" onclick="window.game.goToPrevMove()" title="Lùi">◀</button>
+                <button class="hist-nav-btn" id="hist-next" onclick="window.game.goToNextMove()" title="Tiến">▶</button>
+                <button class="hist-nav-btn" id="hist-last" onclick="window.game.goToLastMove()" title="Cuối">⏭</button>
+              </div>
+            </div>
+            <div class="move-list" id="move-list"></div>
+          </div>
+
+          <!-- Player Cards (hidden, kept for DOM refs & tests) -->
+          <div class="player-card red-card glass-card hidden" id="player-card-red">
+            <div class="player-info">
+              <div class="player-avatar red-avatar">帅</div>
+              <div class="player-details">
+                <span class="player-name" id="red-player-name">Người chơi</span>
+                <span class="player-label">Quân Đỏ</span>
+              </div>
+            </div>
+            <div class="player-timer" id="red-timer">∞</div>
+          </div>
+          <div class="player-card black-card glass-card hidden" id="player-card-black">
+            <div class="player-info">
+              <div class="player-avatar black-avatar">將</div>
+              <div class="player-details">
+                <span class="player-name" id="black-player-name">AI</span>
+                <span class="player-label">Quân Đen</span>
+              </div>
+            </div>
+            <div class="player-timer" id="black-timer">∞</div>
+          </div>
+        </aside>
+
+        <!-- CENTER: Board -->
+        <div class="board-section">
+          <!-- Back button: opens the main menu to choose another mode -->
+          <button type="button" class="mode-chip btn-back-mode" id="mode-chip" onclick="window.game.showMenu()" aria-label="Quay lại" title="Quay lại chọn chế độ">
+            <span aria-hidden="true" style="font-size:16px;line-height:1;font-weight:bold;">←</span> <span id="mode-chip-text">Quay lại</span>
+          </button>
+          <!-- Board setup: who moves first + Black's pieces above the board (hidden unless setting up) -->
+          <div id="editor-turnbar" class="editor-turnbar hidden">
+            <span class="editor-turnbar-title">Trình chỉnh sửa bàn cờ</span>
+            <div class="turn-toggle-group" role="group" aria-label="Lượt đi trước">
+              <button type="button" class="turn-toggle-btn active" id="editor-turn-red" onclick="window.boardEditor.setTurn('red')">
+                <span class="color-dot red-dot"></span> Đỏ đi
+              </button>
+              <button type="button" class="turn-toggle-btn" id="editor-turn-black" onclick="window.boardEditor.setTurn('black')">
+                <span class="color-dot black-dot"></span> Đen đi
+              </button>
+            </div>
+          </div>
+          <div id="editor-tray-black" class="editor-tray hidden" aria-label="Quân Đen">
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="r" onclick="window.boardEditor.selectTool('r')" title="Xe Đen (tối đa 2)"><span class="p-char">車</span><span class="p-badge" id="editor-count-r">2</span></button>
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="n" onclick="window.boardEditor.selectTool('n')" title="Mã Đen (tối đa 2)"><span class="p-char">馬</span><span class="p-badge" id="editor-count-n">2</span></button>
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="b" onclick="window.boardEditor.selectTool('b')" title="Tượng Đen (tối đa 2)"><span class="p-char">象</span><span class="p-badge" id="editor-count-b">2</span></button>
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="a" onclick="window.boardEditor.selectTool('a')" title="Sĩ Đen (tối đa 2)"><span class="p-char">士</span><span class="p-badge" id="editor-count-a">2</span></button>
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="k" onclick="window.boardEditor.selectTool('k')" title="Tướng Đen (tối đa 1)"><span class="p-char">將</span><span class="p-badge" id="editor-count-k">1</span></button>
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="c" onclick="window.boardEditor.selectTool('c')" title="Pháo Đen (tối đa 2)"><span class="p-char">砲</span><span class="p-badge" id="editor-count-c">2</span></button>
+            <button type="button" class="editor-pbtn black-pbtn" data-piece="p" onclick="window.boardEditor.selectTool('p')" title="Tốt Đen (tối đa 5)"><span class="p-char">卒</span><span class="p-badge" id="editor-count-p">5</span></button>
+          </div>
+
+          <div class="board-wrapper">
+            <canvas id="xiangqi-board" width="540" height="600"></canvas>
+            <div id="promotion-dialog" class="promotion-dialog hidden"></div>
+          </div>
+
+          <!-- Red's pieces below the board, then the FEN of the position -->
+          <div id="editor-tray-red" class="editor-tray hidden" aria-label="Quân Đỏ">
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="R" onclick="window.boardEditor.selectTool('R')" title="Xe Đỏ (tối đa 2)"><span class="p-char">俥</span><span class="p-badge" id="editor-count-R">2</span></button>
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="N" onclick="window.boardEditor.selectTool('N')" title="Mã Đỏ (tối đa 2)"><span class="p-char">傌</span><span class="p-badge" id="editor-count-N">2</span></button>
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="B" onclick="window.boardEditor.selectTool('B')" title="Tượng Đỏ (tối đa 2)"><span class="p-char">相</span><span class="p-badge" id="editor-count-B">2</span></button>
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="A" onclick="window.boardEditor.selectTool('A')" title="Sĩ Đỏ (tối đa 2)"><span class="p-char">仕</span><span class="p-badge" id="editor-count-A">2</span></button>
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="K" onclick="window.boardEditor.selectTool('K')" title="Tướng Đỏ (tối đa 1)"><span class="p-char">帥</span><span class="p-badge" id="editor-count-K">1</span></button>
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="C" onclick="window.boardEditor.selectTool('C')" title="Pháo Đỏ (tối đa 2)"><span class="p-char">炮</span><span class="p-badge" id="editor-count-C">2</span></button>
+            <button type="button" class="editor-pbtn red-pbtn" data-piece="P" onclick="window.boardEditor.selectTool('P')" title="Binh Đỏ (tối đa 5)"><span class="p-char">兵</span><span class="p-badge" id="editor-count-P">5</span></button>
+          </div>
+          <div id="editor-fen-row" class="editor-fen-row hidden">
+            <input type="text" id="editor-fen" class="editor-fen" readonly spellcheck="false" aria-label="FEN của thế cờ" />
+            <button type="button" class="editor-fen-copy" onclick="window.boardEditor.copyFEN()" title="Sao chép FEN" aria-label="Sao chép FEN">⧉</button>
+          </div>
+
+          <!-- Board Controls -->
+          <div class="board-controls">
+            <button class="ctrl-btn" id="btn-new-game" onclick="window.game.newGame()" title="Ván mới">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+              Ván mới
+            </button>
+            <button class="ctrl-btn" id="btn-undo" onclick="window.game.undoMove()" title="Đi lại">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+              Đi lại
+            </button>
+            <button class="ctrl-btn" id="btn-hint" onclick="window.game.requestHint()" title="Gợi ý">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+              Gợi ý
+            </button>
+            <button class="ctrl-btn engine-move-btn hidden" id="btn-engine-move" onclick="window.game.handleEngineMoveClick()" aria-pressed="false" title="Máy tự đi: chọn bên Đỏ, Đen hoặc Cả hai">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1"/><path d="M9 14h.01M15 14h.01"/></svg>
+              <span id="engine-move-label">Máy đi</span>
+            </button>
+            <button class="ctrl-btn" id="btn-flip" onclick="window.game.flipBoard()" title="Lật bàn cờ">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+              Lật bàn
+            </button>
+            <button class="ctrl-btn" id="btn-analysis" onclick="window.game.toggleAnalysis()" title="Bật/tắt phân tích">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Phân tích
+            </button>
+            <button class="ctrl-btn" id="btn-editor" onclick="window.boardEditor.toggleEditMode()" title="Bật/tắt xếp cờ thế">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              Xếp cờ thế
+            </button>
+          </div>
+
+          <!-- Status Bar -->
+          <div class="status-bar glass-card">
+            <div class="status-turn" id="status-turn">
+              <div class="turn-indicator red-indicator"></div>
+              <span id="turn-text">Lượt Đỏ</span>
+            </div>
+            <div class="status-message" id="status-message">Hãy thực hiện nước đi</div>
+            <div class="check-badge hidden" id="check-badge">⚔️ CHIẾU!</div>
+          </div>
+
+          <!-- Setup toolbar (pinned to the bottom of the screen on phones) -->
+          <div id="editor-toolbar" class="editor-toolbar hidden">
+            <button type="button" class="editor-toolbar-btn" onclick="window.boardEditor.clearBoard()" title="Dọn sạch bàn cờ, giữ lại hai Tướng">
+              <span class="tb-icon">🧹</span><span>Xoá</span>
+            </button>
+            <button type="button" class="editor-toolbar-btn" onclick="window.boardEditor.resetDefaultBoard()" title="Đặt lại 32 quân ban đầu">
+              <span class="tb-icon">🔄</span><span>Cài lại</span>
+            </button>
+            <button type="button" class="editor-toolbar-btn" onclick="window.game.flipBoard()" title="Lật bàn cờ">
+              <span class="tb-icon">🔃</span><span>Lật bàn</span>
+            </button>
+            <button type="button" class="editor-toolbar-btn primary" id="editor-start-btn" onclick="window.boardEditor.startAnalysis()" title="Kiểm tra thế cờ rồi vào phân tích">
+              <span class="tb-icon">▶</span><span>Phân tích</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- RIGHT PANEL: Move History + Analysis -->
+        <aside class="panel panel-right">
+
+          <!-- Live Multi-Variation Analysis Card (analysis mode). On phones it is a bottom sheet pinned to the screen. -->
+          <div id="main-analysis-card" class="glass-card editor-actions-card hidden">
+            <button type="button" class="sheet-handle" id="sheet-handle" aria-expanded="true" onclick="window.boardEditor.toggleSheet()">
+              <span class="sheet-grip" aria-hidden="true"></span>
+              <span class="sheet-title">💡 Gợi ý nước đi</span>
+              <span class="sheet-summary" id="sheet-summary"></span>
+              <span class="sheet-chevron" aria-hidden="true">▾</span>
+            </button>
+
+            <div class="sheet-body">
+              <div class="suggest-filter" role="group" aria-label="Gợi ý cho bên nào">
+                <button type="button" class="suggest-filter-btn" data-filter="off" onclick="window.boardEditor.setSuggestFilter('off')">Tắt</button>
+                <button type="button" class="suggest-filter-btn active" data-filter="both" onclick="window.boardEditor.setSuggestFilter('both')">Cả hai</button>
+                <button type="button" class="suggest-filter-btn red" data-filter="red" onclick="window.boardEditor.setSuggestFilter('red')">Chỉ Đỏ</button>
+                <button type="button" class="suggest-filter-btn black" data-filter="black" onclick="window.boardEditor.setSuggestFilter('black')">Chỉ Đen</button>
+              </div>
+
+              <div id="editor-analysis-result" class="editor-analysis-result">
+                <div class="eval-row">
+                  <div class="eval-score-wrap">
+                    <span>Đánh giá:</span>
+                    <strong id="editor-eval-score">+0.00</strong>
+                  </div>
+                  <label class="auto-analyze-toggle" title="Tự động phân tích các biến khi đổi lượt hoặc đi quân">
+                    <input type="checkbox" id="editor-auto-analyze" checked onchange="window.boardEditor.toggleAutoAnalyze(this.checked)" />
+                    <span>Tự động</span>
+                  </label>
+                  <button type="button" class="analyze-now-btn" onclick="window.boardEditor.analyzeCustomBoard()" title="Phân tích lại thế cờ này">🔍 Phân tích</button>
+                </div>
+                <div class="eval-bar-track">
+                  <div class="eval-bar-fill" id="editor-eval-fill" style="width: 50%;"></div>
+                </div>
+
+                <div id="editor-variations-list" class="editor-variations-list">
+                  <!-- Variations dynamically rendered here -->
+                </div>
+
+                <details class="variations-legend">
+                  <summary>ⓘ Cách đọc mũi tên trên bàn cờ</summary>
+                  <div class="legend-row">
+                    <span class="legend-swatch rank-1"></span> Biến 1 (tối ưu)
+                    <span class="legend-swatch rank-2"></span> Biến 2
+                    <span class="legend-swatch rank-3"></span> Biến 3
+                  </div>
+                  <div class="legend-row">
+                    <span class="legend-line solid"></span> Nước của bạn
+                    <span class="legend-line dashed"></span> Đối thủ đáp
+                    <span class="legend-num">1 2 3 4</span> thứ tự nước
+                  </div>
+                  <div class="legend-note">Chọn <strong>một</strong> trong 3 biến để đi — chúng là 3 lựa chọn khác nhau, không đi liên tiếp.</div>
+                </details>
+              </div>
+            </div>
+          </div>
+
+          <!-- Move Analysis Feed (PvAI / PvP) (hidden as requested) -->
+          <div class="move-analysis-card glass-card hidden" id="move-analysis-card">
+            <h3 class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Phân Tích Nước Đi
+            </h3>
+            <div class="last-move-quality" id="last-move-quality"></div>
+            <div class="analysis-detail" id="analysis-detail">
+              <p class="analysis-hint">Thực hiện nước đi để xem phân tích</p>
+            </div>
+            <div class="best-move-suggestion" id="best-move-suggestion"></div>
+          </div>
+
+          <!-- FEN Import (hidden as requested) -->
+          <div class="fen-section glass-card hidden">
+            <h3 class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Nhập FEN / Thế Cờ
+            </h3>
+            <div class="fen-input-group">
+              <input type="text" id="fen-input" class="fen-input" placeholder="Dán FEN vào đây..." />
+              <button class="fen-btn" onclick="window.game.loadFEN()">Tải</button>
+            </div>
+            <button class="fen-copy-btn" onclick="window.game.copyFEN()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Sao chép FEN hiện tại
+            </button>
+          </div>
+        </aside>
+
+      </div><!-- end game-layout -->
+    </div><!-- end view-game -->
+
+    <!-- ========== ANALYZE VIEW ========== -->
+    <div id="view-analyze" class="view">
+      <div class="analyze-layout">
+        <div class="analyze-header glass-card">
+          <h2>📊 Phân Tích Ván Cờ</h2>
+          <p>Nhập FEN hoặc danh sách nước đi để phân tích toàn bộ ván cờ</p>
+        </div>
+        <div class="analyze-content">
+          <div class="analyze-input-panel glass-card">
+            <h3>Nhập ván cờ</h3>
+            <div class="input-section">
+              <label>FEN khởi đầu (tuỳ chọn)</label>
+              <input type="text" id="analyze-fen" class="fen-input" placeholder="Mặc định: thế cờ ban đầu" />
+            </div>
+            <div class="input-section">
+              <label>Danh sách nước đi (định dạng WXF/UCI)</label>
+              <textarea id="analyze-moves" class="moves-textarea" placeholder="Ví dụ: h3e3 h8e8 b3e3 ...&#10;Mỗi nước đi cách nhau bởi dấu cách"></textarea>
+            </div>
+            <button class="analyze-btn" onclick="window.analyzer.startAnalysis()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Bắt đầu phân tích
+            </button>
+          </div>
+          <div class="analyze-results glass-card" id="analyze-results">
+            <div class="analyze-placeholder">
+              <div class="placeholder-icon">🔍</div>
+              <p>Kết quả phân tích sẽ hiển thị ở đây</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div><!-- end view-analyze -->
+
+    <!-- ========== LEARN VIEW ========== -->
+    <div id="view-learn" class="view">
+      <div class="learn-layout">
+        <div class="learn-hero glass-card">
+          <h2>📚 Học Cờ Tướng</h2>
+          <p>Các bài học và chiến thuật cơ bản trong cờ tướng</p>
+        </div>
+        <div class="lessons-grid" id="lessons-grid">
+          <!-- Lessons generated by JS -->
+        </div>
+      </div>
+    </div><!-- end view-learn -->
+
+  </main>
+
+</div><!-- end app -->
+
+<!-- MAIN MENU: choose a mode; choosing one starts a fresh game and hides the menu -->
+<div id="main-menu" class="main-menu hidden" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+  <div class="menu-panel">
+    <div class="menu-logo" aria-hidden="true">
+      <span class="menu-logo-icon">棋</span>
+      <span class="menu-logo-text">Cờ Tướng <span class="menu-logo-ai">AI</span></span>
+    </div>
+    <h2 id="menu-title" class="menu-title">Chọn chế độ chơi</h2>
+
+    <div class="menu-card">
+      <div class="menu-card-head">
+        <span class="menu-card-icon" aria-hidden="true">🤖</span>
+        <div><strong>Người vs Máy</strong><span>Đấu với máy, có gợi ý và đánh giá từng nước</span></div>
+      </div>
+
+      <div class="ai-level-section" id="ai-level-section">
+        <label class="setting-label">Độ khó</label>
+        <div class="level-slider-container">
+          <input type="range" id="ai-level" min="1" max="10" value="5" class="level-slider" oninput="window.game.setAILevel(this.value)" />
+          <div class="level-display">
+            <span id="level-label">Trung bình</span>
+            <span id="level-value">5</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-color-section" id="player-color-section">
+        <label class="setting-label">Bạn chơi quân</label>
+        <div class="color-buttons">
+          <button type="button" class="color-btn active" id="color-red" onclick="window.game.setPlayerColor('red')">
+            <span class="color-dot red-dot"></span> Đỏ (đi trước)
+          </button>
+          <button type="button" class="color-btn" id="color-black" onclick="window.game.setPlayerColor('black')">
+            <span class="color-dot black-dot"></span> Đen (đi sau)
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="mode-btn menu-start active" id="mode-pvai" onclick="window.game.setMode('pvai')">▶ Chơi với máy</button>
+    </div>
+
+    <div class="menu-card">
+      <div class="menu-card-head">
+        <span class="menu-card-icon" aria-hidden="true">👥</span>
+        <div><strong>Người vs Người</strong><span>Hai người cùng chơi trên một bàn cờ</span></div>
+      </div>
+      <button type="button" class="mode-btn menu-start" id="mode-pvp" onclick="window.game.setMode('pvp')">▶ Hai người chơi</button>
+    </div>
+
+    <div class="menu-card">
+      <div class="menu-card-head">
+        <span class="menu-card-icon" aria-hidden="true">🔍</span>
+        <div><strong>Phân tích</strong><span>Xếp thế cờ tự do, xem 3 nước gợi ý và đánh giá</span></div>
+      </div>
+      <button type="button" class="mode-btn menu-start" id="mode-analyze-play" onclick="window.game.setMode('analyze')">▶ Phân tích thế cờ</button>
+    </div>
+
+    <button type="button" class="menu-resume hidden" id="menu-resume" onclick="window.game.hideMenu()">↩ Quay lại ván đang chơi</button>
+    <p class="menu-note">Chọn một chế độ sẽ bắt đầu ván mới.</p>
+  </div>
+</div>
+
+<!-- GAME OVER MODAL -->
+<div id="game-over-modal" class="modal-overlay hidden">
+  <div class="modal-content glass-card">
+    <div class="modal-icon" id="modal-icon">🏆</div>
+    <h2 class="modal-title" id="modal-title">Ván cờ kết thúc</h2>
+    <p class="modal-subtitle" id="modal-subtitle"></p>
+    <div class="modal-stats" id="modal-stats"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" onclick="window.game.newGame(); document.getElementById('game-over-modal').classList.add('hidden')">Ván mới</button>
+      <button class="modal-btn secondary" onclick="document.getElementById('game-over-modal').classList.add('hidden')">Xem lại ván đấu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ENGINE AUTO-PLAY OPTIONS MODAL (analysis mode) -->
+<div id="engine-move-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="engine-modal-title">
+  <div class="modal-content glass-card engine-modal-content">
+    <div class="engine-modal-header">
+      <span class="engine-modal-icon" aria-hidden="true">🤖</span>
+      <h3 class="modal-title" id="engine-modal-title">Chọn bên máy tự đi</h3>
+      <p class="modal-subtitle">Bạn muốn máy tự động tính nước đi cho bên nào?</p>
+    </div>
+    <div class="engine-modal-options">
+      <button type="button" class="engine-opt-btn opt-red" id="engine-opt-red" onclick="window.game.startEngineAutoPlay('red')">
+        <span class="engine-opt-icon" aria-hidden="true">🔴</span>
+        <div class="engine-opt-text">
+          <strong>Chỉ quân Đỏ</strong>
+          <small>Máy tự đi Đỏ, bạn đi Đen</small>
+        </div>
+      </button>
+      <button type="button" class="engine-opt-btn opt-black" id="engine-opt-black" onclick="window.game.startEngineAutoPlay('black')">
+        <span class="engine-opt-icon" aria-hidden="true">⚫</span>
+        <div class="engine-opt-text">
+          <strong>Chỉ quân Đen</strong>
+          <small>Máy tự đi Đen, bạn đi Đỏ</small>
+        </div>
+      </button>
+      <button type="button" class="engine-opt-btn opt-both" id="engine-opt-both" onclick="window.game.startEngineAutoPlay('both')">
+        <span class="engine-opt-icon" aria-hidden="true">🔄</span>
+        <div class="engine-opt-text">
+          <strong>Cả hai bên</strong>
+          <small>Máy tự đánh cả Đỏ và Đen tới hết ván</small>
+        </div>
+      </button>
+    </div>
+    <button type="button" class="modal-btn secondary engine-modal-close" onclick="window.game.closeEngineMoveModal()">Đóng</button>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<!-- Shown when a new version is ready but a game / analysis is in progress -->
+<div id="update-banner" class="update-banner hidden" role="status">
+  <span>Có phiên bản mới.</span>
+  <button type="button" id="update-reload">Cập nhật</button>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/xiangqi.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/lessons.js"></script>
+<script src="js/pwa.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

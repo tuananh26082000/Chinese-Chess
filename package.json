@@ -1,0 +1,11 @@
+{
+  "name": "chinese-chess",
+  "private": true,
+  "description": "Cờ Tướng AI - static web app",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
